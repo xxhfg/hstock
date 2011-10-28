@@ -88,7 +88,8 @@ class KZHQ(models.Model):
     SEL = models.IntegerField() #价格方差和换手方差同时大于0, 置为1, 且连续增加, 直至价格小于选中均价或大于20
     SEC = models.IntegerField() #SEL大于0时的均价
     TIM = models.FloatField() #SEL=1时前五日换手与近五日换手的比值
-    SIG = models.IntegerField() #收盘价格大于SEC且近五日换手相比有20%的增幅
+    SIG = models.IntegerField()
+    #收盘价格大于SEC且近五日换手相比有20%的增幅置为1, 且连续增加
 
     class Meta:
         unique_together = (('CODE', 'JYRQ'), )
