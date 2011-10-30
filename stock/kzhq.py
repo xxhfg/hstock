@@ -163,6 +163,12 @@ def do_job(args):
         if sel_close > 0:
             chg_c = round((float(rec['CLOSE'])/sel_close - 1) * 100, 2)
             kk += 1
+
+        rec['VWN'] = 0
+        rec['SEL'] = 0
+        rec['SEC'] = 0
+        rec['TIM'] = 0
+        rec['SIG'] = 0
         print rec['JYRQ'], rec['OWN'], rec['LESS'], sel_close, rec['CLOSE'], kk, chg_c
 
         """
@@ -197,12 +203,15 @@ def save_kzhq():
 
     for rec in records:
         print "正在处理 " + rec['CODE'].encode('UTF8') + " 股票 " + str(rec['JYRQ'])[0:10].encode('UTF8') + "日数据......"
-        kzhq = models.KZHQ(CODE=rec['CODE'], JYRQ=rec['JYRQ'],
-                           OPEN=rec['OPEN'], HIGH=rec['HIGH'], LOW=rec['LOW'],
-                           CLOSE=rec['CLOSE'], PCLOSE=rec['PCLOSE'],
-                           PHIGH=rec['PHIGH'], PLOW=rec['PLOW'],
-                           VOL=rec['VOL'], AMT=rec['AMT'], TOR=rec['TOR'],
-                           CHG=rec['CHG'], AVG=rec['AVG'], SPV=rec['SPV'], OWN=rec['OWN'])
+        #kzhq = models.KZHQ(CODE=rec['CODE'], JYRQ=rec['JYRQ'],
+                           #OPEN=rec['OPEN'], HIGH=rec['HIGH'], LOW=rec['LOW'],
+                           #CLOSE=rec['CLOSE'], PCLOSE=rec['PCLOSE'],
+                           #PHIGH=rec['PHIGH'], PLOW=rec['PLOW'],
+                           #VOL=rec['VOL'], AMT=rec['AMT'], TOR=rec['TOR'],
+                           #CHG=rec['CHG'], AVG=rec['AVG'], SPV=rec['SPV'], OWN=rec['OWN'])
+
+        kzhq = models.KZHQ()
+        kzhq.__dict__.update(rec)
         kzhq.save()
 
 

@@ -4,6 +4,7 @@
 
 from django.db import models
 import time
+import string
 
 # Create your models here.
 """
