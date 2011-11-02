@@ -17,6 +17,16 @@ from stock.gphq import models
 from django.db import connection, transaction
 from workmanager import * 
 
+def sums(data):
+    """计算数组和"""
+    #if (len(data) <= 1): return (0, 0)
+
+    sum = 0.0
+    for value in data:
+        sum += value
+
+    return sum
+
 def stats(data):
     """计算均价和方差"""
     if (len(data) <= 1): return (0, 0)
@@ -65,7 +75,8 @@ def do_job(args):
     data = []
     vars = []
     tors = [] #近五日换手率
-    p_tors = [] #近十日换手率
+    ttors = [] #近十日换手率
+    p_tors = [] 
     v_tors = []
     pown = 0
     ptor = 0
@@ -73,6 +84,7 @@ def do_job(args):
     sel_close = 0
     chg_c = 0
     kk = 0
+    tim = 0
     for rxhq in rxhqs:
         rec = {}
         #rec['TOTAL'] = latest_gbbq.TOTAL #最新总股本
@@ -107,87 +119,99 @@ def do_job(args):
         rec['AMT'] = rxhq.AMT
         rec['CHG'] = round((1.0 * rec['CLOSE'] / rec['PCLOSE'] - 1) * 100.0, 2)
         rec['AVG'] = round(rec['AMT'] / rec['VOL'], 2)
+
+        #近期5日均价数组
         if (len(data) >= 5):
             data.pop(0)
         data.append(rec['AVG'])
-        #print data
+        #求5日均价和方差
         (mean, variance) = stats(data)
         rec['SPV'] = variance
 
+        #近期5日换手数组
         if (len(tors) >= 5):
             tors.pop(0)
         tors.append(round(rec['TOR'] * 100, 0))
-        #print tors
+        if (len(ttors) >= 10):
+            ttors.pop(0)
+        ttors.append(round(rec['TOR'] * 100, 0))
+        #求5日平均换手和方差
         (mtor, vtor)=stats(tors)
+        #近期5日平均换手数组
         if (len(p_tors) >= 5):
             p_tors.pop(0)
         p_tors.append(mtor)
+        #求5日平均换手的5日平均和方差
         (mmtor, vvtor)=stats(p_tors)
+        #近5日平均换手方差数组
         if (len(v_tors) >= 5):
             v_tors.pop(0)
         v_tors.append(vvtor)
+        #下降标志大于0
         if (ptor > 0):
+            #连续下降, 标志加1
             if (vvtor < 100) and (vvtor > 0):
-                rec['LESS'] = ptor + 1
+                rec['VWN'] = ptor + 1
             else:
-                rec['LESS'] = 0
+                #方差大于100, 标志重置为0
+                rec['VWN'] = 0
         else:
+            #近5日方差数组连续下降, 并且最后一日方差小于100, 标志置为1
             if ((all_down(v_tors) == (len(v_tors) - 1)) and (vvtor < 100) and
                 (vvtor > 0)):
-                rec['LESS'] = 1
+                rec['VWN'] = 1
             else:
-                rec['LESS'] = 0
+                rec['VWN'] = 0
 
+        #近5日均价方差数组
         if (len(vars) >= 5):
             vars.pop(0)
         vars.append(variance)
+        #下降标志大于0
         if (pown > 0):
+            #连续下降, 标志加1
             if (variance < 100) and (variance > 0):
                 rec['OWN'] = pown + 1
             else:
+                #方差大于100, 标志重置为0
                 rec['OWN'] = 0
         else:
+            #近5日方差数组连续下降, 并且最后一日方差小于100, 标志置为1
             if ((all_down(vars) == (len(vars) - 1)) and (variance < 100) and
                 (variance > 0)):
                 rec['OWN'] = 1
             else:
                 rec['OWN'] = 0
 
-        if (rec['OWN'] > 0) and (rec['LESS'] > 0) :
+        #价格标志和换手标志都大于0, 选中价格为0, 置选中价格为5日均价
+        if (rec['OWN'] > 0) and (rec['VWN'] > 0) :
+            tim = (sums(ttors) - sums(tors)) / sums(tors)
             if (sel_close == 0):
-                sel_close = rec['CLOSE']
+                sel_close = mean
+        #选中20日后, 重置为0
         if kk > 20:
+            tim = 0
             sel_close = 0
             kk = 0
 
+        #选中价格大于0, 选中天数加1
         if sel_close > 0:
             chg_c = round((float(rec['CLOSE'])/sel_close - 1) * 100, 2)
             kk += 1
 
-        rec['VWN'] = 0
-        rec['SEL'] = 0
-        rec['SEC'] = 0
-        rec['TIM'] = 0
+        rec['SEL'] = kk
+        rec['SEC'] = sel_close
+        rec['TIM'] = tim
         rec['SIG'] = 0
-        print rec['JYRQ'], rec['OWN'], rec['LESS'], sel_close, rec['CLOSE'], kk, chg_c
+        print rec['JYRQ'], rec['OWN'], rec['VWN'], sel_close, rec['CLOSE'], kk, chg_c
 
-        """
-        print rec['JYRQ']
-        print round(rxhq.AMT / rxhq.VOL, 2)
-        print ratio
-        print pratio
-        print rec['TOR']
-        print rec['VOL']
-        print rec['AMT']
-        print rec['FLOW']
-        print rec['REAL']
-        print rec['TOTAL']
-        print rec['AVG']
-        """
         recs.append(rec)
+        #股本比例记录
         pratio = ratio
+        #记录价格标志
         pown = rec['OWN']
-        ptor = rec['LESS']
+        #记录换手标志
+        ptor = rec['VWN']
 
     g_mutex.acquire()
     i = 0
@@ -203,12 +227,6 @@ def save_kzhq():
 
     for rec in records:
         print "正在处理 " + rec['CODE'].encode('UTF8') + " 股票 " + str(rec['JYRQ'])[0:10].encode('UTF8') + "日数据......"
-        #kzhq = models.KZHQ(CODE=rec['CODE'], JYRQ=rec['JYRQ'],
-                           #OPEN=rec['OPEN'], HIGH=rec['HIGH'], LOW=rec['LOW'],
-                           #CLOSE=rec['CLOSE'], PCLOSE=rec['PCLOSE'],
-                           #PHIGH=rec['PHIGH'], PLOW=rec['PLOW'],
-                           #VOL=rec['VOL'], AMT=rec['AMT'], TOR=rec['TOR'],
-                           #CHG=rec['CHG'], AVG=rec['AVG'], SPV=rec['SPV'], OWN=rec['OWN'])
 
         kzhq = models.KZHQ()
         kzhq.__dict__.update(rec)
@@ -233,7 +251,7 @@ def main():
 
     #work_manager =  WorkManager(codes, do_job, 10)#或者work_manager =  WorkManager(10000, 20)  
     #work_manager.wait_allcomplete()  
-    do_job(['1600000'])
+    do_job(['1600225'])
 
     cursor = connection.cursor()
     cursor.execute('delete from gphq_kzhq')
