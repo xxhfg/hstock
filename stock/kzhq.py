@@ -85,6 +85,7 @@ def do_job(args):
     chg_c = 0
     kk = 0
     tim = 0
+    sig = 0
     for rxhq in rxhqs:
         rec = {}
         #rec['TOTAL'] = latest_gbbq.TOTAL #最新总股本
@@ -190,21 +191,26 @@ def do_job(args):
             if (sel_close == 0):
                 tim = (sums(ttors) - sums(tors)) / sums(tors)
                 sel_close = mean
-        #选中20日后, 或者均价小于选中价格, 重置为0
-        if (kk > 20) or (rec['AVG'] < sel_close):
-            sel_close = 0
-            tim = 0
-            kk = 0
 
         #选中价格大于0, 选中天数加1
         if sel_close > 0:
+            if (rec['AVG'] > sel_close) and (((sums(ttors) - sums(tors)) /
+                                              sums(tors)) > 0.20):
+                sig += 1
             chg_c = round((float(rec['CLOSE'])/sel_close - 1) * 100, 2)
             kk += 1
+
+        #选中20日后, 或者均价小于选中价格, 重置为0
+        if (kk > 20) or (rec['AVG'] < sel_close) or (chg_c > 0.20):
+            sel_close = 0
+            tim = 0
+            kk = 0
+            sig = 0
 
         rec['SEL'] = kk
         rec['SEC'] = sel_close
         rec['TIM'] = tim
-        rec['SIG'] = mean
+        rec['SIG'] = sig
         print rec['JYRQ'], rec['OWN'], rec['VWN'], sel_close, rec['CLOSE'], kk, chg_c
 
         recs.append(rec)

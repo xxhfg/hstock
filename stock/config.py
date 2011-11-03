@@ -8,7 +8,8 @@ import os
 PROJECT_HOME = os.path.dirname(__file__) + '/..'
 
 #STOCK_HOME = '/media/BACKUP/NewStock/'
-STOCK_HOME = '/volumes/TOOL/NewStock/'
+#STOCK_HOME = '/volumes/TOOL/NewStock/'
+STOCK_HOME = 'C:/NewStock/'
 TDX_HOME = STOCK_HOME + '大金庄/'
 DZH_HOME = STOCK_HOME + 'dzh2in1/dzh1/'
 THS_HOME = STOCK_HOME + '同花顺/'
