@@ -98,7 +98,8 @@ def do_job(args):
                 #rec['FLOW'] = gbbq.REAL #当日流通股
                 rec['REAL'] = gbbq.REAL #当日实际流通股本
                 rec['FLOW'] = gbbq.FLOW #当日流通股
-                rec['TOR'] = round(100.0 * rxhq.VOL / gbbq.REAL, 4) if gbbq.REAL > 0 else round(100.0 * rxhq.VOL / gbbq.TOTAL, 4)
+                rec['TOR'] = round(100.0 * rxhq.VOL / gbbq.REAL, 4) * 100 \
+                        if gbbq.REAL > 0 else round(100.0 * rxhq.VOL / gbbq.TOTAL, 4) * 100
                 # print gbbq.REAL
                 # print rxhq.VOL
                 break
@@ -117,7 +118,7 @@ def do_job(args):
         rec['PLOW'] = rxhq.PLOW *  pratio
         rec['VOL'] = round(1.0 * latest_gbbq.REAL * rec['TOR'] / 100.0, 2) if latest_gbbq.REAL > 0 else round(1.0 * latest_gbbq.TOTAL * rec['TOR'] / 100.0, 2)
         rec['AMT'] = rxhq.AMT
-        rec['CHG'] = round((1.0 * rec['CLOSE'] / rec['PCLOSE'] - 1) * 100.0, 2)
+        rec['CHG'] = round((1.0 * rec['CLOSE'] / rec['PCLOSE'] - 1) * 100.0, 2) * 100
         rec['AVG'] = round(rec['AMT'] / rec['VOL'], 2)
 
         #近期5日均价数组
@@ -143,6 +144,7 @@ def do_job(args):
         p_tors.append(mtor)
         #求5日平均换手的5日平均和方差
         (mmtor, vvtor)=stats(p_tors)
+        rec['SPT'] = vvtor
         #近5日平均换手方差数组
         if (len(v_tors) >= 5):
             v_tors.pop(0)
@@ -150,14 +152,14 @@ def do_job(args):
         #下降标志大于0
         if (ptor > 0):
             #连续下降, 标志加1
-            if (vvtor < 100) and (vvtor > 0):
+            if (vvtor < 100 * 5) and (vvtor > 0):
                 rec['VWN'] = ptor + 1
             else:
                 #方差大于100, 标志重置为0
                 rec['VWN'] = 0
         else:
             #近5日方差数组连续下降, 并且最后一日方差小于100, 标志置为1
-            if ((all_down(v_tors) == (len(v_tors) - 1)) and (vvtor < 100) and
+            if ((all_down(v_tors) == (len(v_tors) - 1)) and (vvtor < 100 * 5) and
                 (vvtor > 0)):
                 rec['VWN'] = 1
             else:
@@ -185,13 +187,13 @@ def do_job(args):
 
         #价格标志和换手标志都大于0, 选中价格为0, 置选中价格为5日均价
         if (rec['OWN'] > 0) and (rec['VWN'] > 0) :
-            tim = (sums(ttors) - sums(tors)) / sums(tors)
             if (sel_close == 0):
+                tim = (sums(ttors) - sums(tors)) / sums(tors)
                 sel_close = mean
-        #选中20日后, 重置为0
-        if kk > 20:
-            tim = 0
+        #选中20日后, 或者均价小于选中价格, 重置为0
+        if (kk > 20) or (rec['AVG'] < sel_close):
             sel_close = 0
+            tim = 0
             kk = 0
 
         #选中价格大于0, 选中天数加1
@@ -202,7 +204,7 @@ def do_job(args):
         rec['SEL'] = kk
         rec['SEC'] = sel_close
         rec['TIM'] = tim
-        rec['SIG'] = 0
+        rec['SIG'] = mean
         print rec['JYRQ'], rec['OWN'], rec['VWN'], sel_close, rec['CLOSE'], kk, chg_c
 
         recs.append(rec)

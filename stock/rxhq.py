@@ -93,7 +93,8 @@ def do_job2(args):
                 record['PLOW'] = prel * 100 #以分为单位
                 record['VOL'] = vol #以股为单位
                 record['AMT'] = amt * 100 #以分为单位
-                record['CHG'] = round(((close * 1.0) / (prec * 1.0) - 1) * 100, 2)
+                record['CHG'] = round(((close * 1.0) / (prec * 1.0) - 1) * 100,
+                                      2) * 100
                 #print record
                 #print vol, yvol, amt, yamt, 1.0*yvol/vol, yamt/amt
                 recs.append(record)

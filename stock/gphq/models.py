@@ -35,7 +35,7 @@ class RXHQ(models.Model):
     PLOW = models.IntegerField() #昨日最低价格
     VOL = models.IntegerField() #成交量
     AMT = models.IntegerField() #成交额
-    CHG = models.FloatField() #涨幅
+    CHG = models.IntegerField() #涨幅
 
     class Meta:
         unique_together = (('CODE', 'JYRQ'), )
@@ -81,14 +81,15 @@ class KZHQ(models.Model):
     VOL = models.IntegerField() #成交量
     AMT = models.IntegerField() #成交额
     AVG = models.IntegerField() #均价
-    CHG = models.FloatField() #涨幅
-    TOR = models.FloatField() #换手率TurnOver Ratio
+    CHG = models.IntegerField() #涨幅
+    TOR = models.IntegerField() #换手率TurnOver Ratio
     SPV = models.IntegerField() #股票价格的波动率Stock Price Volatility
+    SPT = models.IntegerField() #五日平均换手的波动率Stock Price Volatility
     OWN = models.IntegerField() #价格方差连续下降, 且小于100, 置为1, 且连续增加, 直至大于100
     VWN = models.IntegerField() #换手方差连续下降, 且小于100, 置为1, 且连续增加, 直至大于100
     SEL = models.IntegerField() #价格方差和换手方差同时大于0, 置为1, 且连续增加, 直至价格小于选中均价或大于20
     SEC = models.IntegerField() #SEL大于0时的均价
-    TIM = models.FloatField() #SEL=1时前五日换手与近五日换手的比值
+    TIM = models.IntegerField() #SEL=1时前五日换手与近五日换手的比值
     SIG = models.IntegerField()
     #收盘价格大于SEC且近五日换手相比有20%的增幅置为1, 且连续增加
 
