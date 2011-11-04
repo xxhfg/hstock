@@ -34,11 +34,11 @@ def stats(data):
     sum = 0.0
     for value in data:
         sum += value
-    mean = sum/len(data)
+    mean = round(sum/len(data), 0)
     sum = 0.0
     for value in data:
         sum += (value - mean)**2
-    variance = sum/(len(data) - 1)
+    variance = round(sum/(len(data) - 1), 0)
     return (mean, variance)
 
 def all_down(data):
@@ -120,7 +120,7 @@ def do_job(args):
         rec['VOL'] = round(1.0 * latest_gbbq.REAL * rec['TOR'] / 100.0, 2) if latest_gbbq.REAL > 0 else round(1.0 * latest_gbbq.TOTAL * rec['TOR'] / 100.0, 2)
         rec['AMT'] = rxhq.AMT
         rec['CHG'] = round((1.0 * rec['CLOSE'] / rec['PCLOSE'] - 1) * 100.0, 2) * 100
-        rec['AVG'] = round(rec['AMT'] / rec['VOL'], 2)
+        rec['AVG'] = round(rec['AMT'] / rec['VOL'], 2) * 100
 
         #近期5日均价数组
         if (len(data) >= 5):
@@ -133,10 +133,10 @@ def do_job(args):
         #近期5日换手数组
         if (len(tors) >= 5):
             tors.pop(0)
-        tors.append(round(rec['TOR'] * 100, 0))
+        tors.append(round(rec['TOR'], 0))
         if (len(ttors) >= 10):
             ttors.pop(0)
-        ttors.append(round(rec['TOR'] * 100, 0))
+        ttors.append(round(rec['TOR'], 0))
         #求5日平均换手和方差
         (mtor, vtor)=stats(tors)
         #近期5日平均换手数组
@@ -189,19 +189,20 @@ def do_job(args):
         #价格标志和换手标志都大于0, 选中价格为0, 置选中价格为5日均价
         if (rec['OWN'] > 0) and (rec['VWN'] > 0) :
             if (sel_close == 0):
-                tim = (sums(ttors) - sums(tors)) / sums(tors)
+                tim = (sums(ttors) - sums(tors)) / sums(tors) * 100
                 sel_close = mean
 
+        tt = ((sums(ttors) - sums(tors)) / sums(tors))
         #选中价格大于0, 选中天数加1
         if sel_close > 0:
-            if (rec['AVG'] > sel_close) and (((sums(ttors) - sums(tors)) /
-                                              sums(tors)) > 0.20):
+            if (rec['AVG'] > sel_close) and (tt > 1.20):
                 sig += 1
             chg_c = round((float(rec['CLOSE'])/sel_close - 1) * 100, 2)
             kk += 1
 
+        print kk, sel_close, tt, sig, chg_c
         #选中20日后, 或者均价小于选中价格, 重置为0
-        if (kk > 20) or (rec['AVG'] < sel_close) or (chg_c > 0.20):
+        if (kk > 20) or (rec['AVG'] < sel_close) or (chg_c > 20):
             sel_close = 0
             tim = 0
             kk = 0
@@ -211,7 +212,7 @@ def do_job(args):
         rec['SEC'] = sel_close
         rec['TIM'] = tim
         rec['SIG'] = sig
-        print rec['JYRQ'], rec['OWN'], rec['VWN'], sel_close, rec['CLOSE'], kk, chg_c
+        print rec['JYRQ'], rec['OWN'], rec['VWN'], rec['AVG'], sel_close, rec['CLOSE'], kk, chg_c
 
         recs.append(rec)
         #股本比例记录
